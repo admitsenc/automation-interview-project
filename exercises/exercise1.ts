@@ -12,10 +12,46 @@ describe('Exercise 1', () => {
   // property containing an array of of managed employee id but not if the value is employee.
 
   test('Create a type to save employee information', () => {
-    type EmployeeInformation = object;
-    const manager: EmployeeInformation = {};
+    type EmployeeBase = {
+      "id": number;
+      "first name": string;
+      "last name": string;
+      "job title": string;
+      "email": string;
+      "phone": string;
+    };
 
-    const employee: EmployeeInformation = {};
+    type RegularEmployee = EmployeeBase & {
+      "role": 'employee';
+    }
+
+    type ManagerEmployee = EmployeeBase & {
+      "role": 'manager',
+      "subordinateIds": number[]
+    }
+
+    type EmployeeInformation = RegularEmployee | ManagerEmployee;
+
+    const manager: EmployeeInformation = {
+      "id": 1,
+      "first name": "Johnson",
+      "last name": "Jackson",
+      "job title": "CTO",
+      "email": "jonhsonjackson@qctech.com",
+      "phone": "+1-555-0000",
+      "role": "manager",
+      "subordinateIds": [2, 3]
+    };
+
+    const employee: RegularEmployee  = {
+      "id": 45,
+      "first name": "John",
+      "last name": "Doe",
+      "job title": "Software engineer",
+      "email": "johndoe@qctech.com",
+      "phone": "+1-555-1234",
+      "role": "employee"
+    };
 
     expect(Object.keys(manager)).toContain('subordinateIds');
     expect(Object.keys(employee)).not.toContain('subordinateIds');
@@ -25,16 +61,36 @@ describe('Exercise 1', () => {
   // The employee list should be loaded from company.json file.
 
   test('Return several information about the company employees', () => {
-    const employees = [];
+    const company = require('./content/company.json');
 
     // All employees
-    expect(employees.length).toEqual(24);
+    expect(company.employees.length).toEqual(24);
 
     // All non manager employees
-    expect(employees.length).toEqual(20);
+    let nonManagerEmployees = [];
+    for (let i = 0; i < company.employees.length; i++) {
+      if (company.employees[i].isManager === false) {
+        nonManagerEmployees.push(company.employees[i]);
+      }
+    }
+    expect(nonManagerEmployees.length).toEqual(20);
 
     // Top manager employees (employees who are not managed by anyone)
-    expect(employees.length).toEqual(1);
+    let managedEmployees: any[] = [];
+    for (let i = 0; i < company.employees.length; i++) {
+      if (company.employees[i].isManager === true) {
+        managedEmployees.push(company.employees[i].subordinateIds);
+      }
+    }
+
+    const managedEmployeesArray = managedEmployees.flat();
+    let topManagerEmployees = [];
+    for (let i = 0; i < company.employees.length; i++) {
+      if (managedEmployeesArray.includes(company.employees[i].id) === false) {
+        topManagerEmployees.push(company.employees[i]);
+      }
+    }
+    expect(topManagerEmployees.length).toEqual(1);
   });
 
   // Task 3: Create a function which will take an employee id as parameter and return the amount of subordinates
@@ -43,9 +99,31 @@ describe('Exercise 1', () => {
   // Tip: You can modify the function signature
 
   test('Create a function to display amount of subordinates', () => {
-    const employees = [];
+    const company = require('./content/company.json');
 
-    const getSubordinatesAmount = (id: number): number => -1;
+    const getSubordinatesAmount = (id: number): number => {
+      const arr: number[] = [];
+
+      const addToArray = (array: number[]) => {
+        for (let i = 0; i < array.length; i++) {
+          arr.push(array[i]);
+        }
+      };
+
+      const helper = (id: number) => {
+        const employee = company.employees.find((employee: { id: number; }) => employee.id === id);
+        if (!employee || !employee.isManager) return;
+
+        addToArray(employee.subordinateIds);
+
+        for (let subId of employee.subordinateIds) {
+          helper(subId);
+        }
+      };
+
+      helper(id);
+      return arr.length;
+    };
 
     expect(getSubordinatesAmount(67)).toEqual(0);
     expect(getSubordinatesAmount(4)).toEqual(10);
